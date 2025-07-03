@@ -16,6 +16,8 @@
 	<string>google_map</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <string>this app requires to access your location to display your current position on Google Maps, ensure you can navigate and find places to your effectively</string>
 	<key>CFBundleShortVersionString</key>
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>

@@ -37,6 +37,7 @@ dependencies:
   google_maps_flutter: ^2.12.3
   mvc_pattern: ^8.12.0
   get_it: ^8.0.3
+  location: ^8.0.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

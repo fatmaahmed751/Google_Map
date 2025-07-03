@@ -13,21 +13,33 @@ class MyMapScreen extends StatefulWidget {
 }
 class MyMapScreenState extends StateMVC<MyMapScreen> {
   MyMapScreenState() : super(MyMapController()) {
-    con = controller as MyMapController;
+  con = controller as MyMapController;
+   // con =  MyMapController();
   }
 
   late MyMapController con;
   final Completer<GoogleMapController> _mapController = Completer();
 
   @override
+  void initState() {
+    super.initState();
+    con.initMarker();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      con.updateMyLocation();
+    });
+
+  }
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           GoogleMap(
+            zoomControlsEnabled: false,
+         markers:con.markers,
             initialCameraPosition: CameraPosition(
               target: con.currentLatLng,
-              zoom: 14,
+              zoom: 15,
             ),
             onMapCreated: (GoogleMapController controller) {
               _mapController.complete(controller);
@@ -35,19 +47,19 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
               con.initStyleMap(context);
             },
           ),
-          Positioned(
-            bottom: 16,
-            right: 16,
-            left: 16,
-            child: ElevatedButton(
-              onPressed: () {
-                con.goToMyCurrentLocation();
-                print('الموقع المبدئي: ${con.currentLatLng}');
-              //  print('الموقع المستهدف: ${con.targetLocation}');
-              },
-              child: Text("Change location"),
-            ),
-          )
+          // Positioned(
+          //   bottom: 16,
+          //   right: 16,
+          //   left: 16,
+          //   child: ElevatedButton(
+          //     onPressed: () {
+          //       con.goToMyCurrentLocation();
+          //       print('الموقع المبدئي*****************************************************: ${con.currentLatLng}');
+          //     //  print('الموقع المستهدف: ${con.targetLocation}');
+          //     },
+          //     child: Text("Change location"),
+          //   ),
+          // )
         ],
       ),
     );
