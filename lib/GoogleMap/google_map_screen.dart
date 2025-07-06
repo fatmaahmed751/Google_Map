@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:location/location.dart';
 import 'package:mvc_pattern/mvc_pattern.dart';
 
 import 'google_map_controller.dart';
@@ -12,18 +13,28 @@ class MyMapScreen extends StatefulWidget {
   State createState() => MyMapScreenState();
 }
 class MyMapScreenState extends StateMVC<MyMapScreen> {
+
+ // final Completer<GoogleMapController> _mapController = Completer();
   MyMapScreenState() : super(MyMapController()) {
   con = controller as MyMapController;
    // con =  MyMapController();
   }
 
   late MyMapController con;
-  final Completer<GoogleMapController> _mapController = Completer();
+ final Completer<GoogleMapController> _mapController = Completer();
 
   @override
   void initState() {
+    Location().hasPermission().then((perm) {
+      print('PERMISSION STATUS: $perm');
+    });
+
     super.initState();
-    con.initMarker();
+    con.onMarkersUpdated = () {
+      if (mounted) {
+        setState(() {});
+      }
+    };
     WidgetsBinding.instance.addPostFrameCallback((_) {
       con.updateMyLocation();
     });
@@ -34,12 +45,14 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
     return Scaffold(
       body: Stack(
         children: [
-          GoogleMap(
+          con.markers.isEmpty
+        ? const Center(child: CircularProgressIndicator())
+          :GoogleMap(
             zoomControlsEnabled: false,
          markers:con.markers,
             initialCameraPosition: CameraPosition(
               target: con.currentLatLng,
-              zoom: 15,
+              zoom: 12.0,
             ),
             onMapCreated: (GoogleMapController controller) {
               _mapController.complete(controller);

@@ -42,13 +42,8 @@ class MyMapController extends ControllerMVC {
     30.74859561310244,
   );
   final LatLng targetLocation = const LatLng(30.257923, 31.537993);
-  Location location = Location();
-
-  @override
-  void initState() {
-   // updateMyLocation();
-    super.initState();
-  }
+  final Location location = Location();
+bool isFirst = true;
 
   @override
   void dispose() {
@@ -57,16 +52,18 @@ class MyMapController extends ControllerMVC {
   }
 
 
-  Future<void> checkAndRequestLocation() async {
+  Future<bool> checkAndRequestLocation() async {
     try{
-    bool serviceEnabled = await location.serviceEnabled();
+    var serviceEnabled = await location.serviceEnabled();
     if (!serviceEnabled) {
-      await location.requestService();
+      serviceEnabled = await location.requestService();
       if (!serviceEnabled) {
+        return false;
         throw Exception('Location services are required but disabled');
       }
     }
-    checkPermission();
+    return true;
+   // checkPermission();
   } catch (e) {
   print('Error checking location services: $e');
   // Consider showing a user-friendly message
@@ -80,33 +77,57 @@ class MyMapController extends ControllerMVC {
       return false;
     }
     if (permission == PermissionStatus.denied) {
-      await location.requestPermission();
+      permission = await location.requestPermission();
       if (permission != PermissionStatus.granted) {
         return false;
       }
     }
-    return true;
+    return permission == PermissionStatus.granted;
     print("Location permissions are denied.");
   }
 
   void getUserLocation() {
+    location.changeSettings(
+      interval: 2000,
+      distanceFilter: 2
+    );
     location.onLocationChanged.listen((data) {
-      var cameraPosition = CameraPosition(
-        target: LatLng(data.latitude!, data.longitude!),
-        zoom: 15,
-      );
-      var myMarker = Marker(
-        markerId: MarkerId('1'),
-        position: LatLng(data.latitude!, data.longitude!),
-      );
-      markers.add(myMarker);
-      setState(() {});
-      googleMapController?.animateCamera(
-        CameraUpdate.newCameraPosition(cameraPosition),
-      );
-    });
+       if (data.latitude != null && data.longitude != null) {
+            addMarkerAsMyLocation(data);
+            updateCameraPosition(data); // يتحرك أول مرة للموقع الفعلي
+          }
+        });
   }
 
+  void updateCameraPosition(LocationData data) {
+    if(isFirst) {
+      CameraPosition cameraPosition = CameraPosition(
+        target: LatLng(data.latitude!, data.longitude!),
+        zoom: 17,
+      );
+      googleMapController?.animateCamera(
+          CameraUpdate.newCameraPosition(cameraPosition));
+      isFirst = false;
+    }else {
+      googleMapController?.animateCamera(
+          CameraUpdate.newLatLng(LatLng(data.latitude!, data.longitude!)));
+    }
+  }
+
+  void addMarkerAsMyLocation(LocationData data) {
+    var myMarker = Marker(
+      markerId: MarkerId('1'),
+      position: LatLng(data.latitude!, data.longitude!),
+    );
+    markers.add(myMarker);
+    if (onMarkersUpdated != null) {
+      onMarkersUpdated!(); // this will call setState in the Widget
+    }
+    print("Current location: ${data.latitude}, ${data.longitude}");
+
+    // setState(() {});
+  }
+  void Function()? onMarkersUpdated;
   void updateMyLocation() async {
     try {
       await checkAndRequestLocation();
@@ -114,18 +135,13 @@ class MyMapController extends ControllerMVC {
       if (hasPermission) {
         getUserLocation();
       } else {
-        print('Location permissions not granted');
+        print('***********************************************************************Location permissions not granted');
         // Handle permission denial
       }
     } catch (e) {
       print('Error updating location: $e');
       // Handle error appropriately
     }
-    // await checkAndRequestLocation();
-    // var hasPermission = await checkPermission();
-    // if (hasPermission) {
-    //   getUserLocation();
-    // }
   }
   // void initMarker(){
   //     var myMarker = Marker(markerId: MarkerId('1'),position:const LatLng(28.069255, 30.763991));
