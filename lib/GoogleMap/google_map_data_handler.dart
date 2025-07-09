@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import '../Models/Place_suggestion.dart';
 import '../Models/place_autocomplete_model.dart';
+import '../Models/place_details_model.dart';
 import '../core/API/generic_request.dart';
 import '../core/API/request_method.dart';
 import '../core/error/exceptions.dart';
@@ -19,9 +20,7 @@ class PickLocationDataHandler {
     try {
       final encodedPlace = Uri.encodeComponent(place);
       final url =
-          "https://maps.googleapis.com/maps/api/place/autocomplete/json"
-          "?input=$encodedPlace"
-          "&types=address"
+          "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$encodedPlace""&types=address"
           "&components=country:eg"
           "&key=YOUR_API_KEY"  // Replace with secure key
           "&sessiontoken=$sessionToken";
@@ -40,7 +39,58 @@ class PickLocationDataHandler {
       return Left(ServerFailure(failure.errorMessageModel));
     }
   }
+  static Future<Either<Failure,PlaceDetailsModel>> getPlaceDetails({required String id, required String sessionToken})async{
+    try {
+      PlaceDetailsModel response = await GenericRequest<PlaceDetailsModel>(
+        method: RequestApi.get(
+            url: "https://maps.googleapis.com/maps/api/place/details/json?place_id=$id&fields=geometry&key=AIzaSyDxGfP9wVkkoIDBRwqR1i4H7afn-oQm33w&sessiontoken=$sessionToken",
+
+        ),
+          fromMap: (json) => PlaceDetailsModel.fromJson(json)
+
+        //  fromMap:(_)=>PlaceDetailsModel.fromJson(_["result"]["geometry"]["location"]),
+      ).getResponse();
+      return Right(response);
+    } on ServerException catch (failure) {
+      return Left(ServerFailure(failure.errorMessageModel));
+    }
+  }
 }
+
+
+// Future<void> fetchPlaceDetails(String placeId) async {
+//   final String apiKey = 'YOUR_API_KEY'; // 🔐 استبدله بمفتاحك
+//   final String endpoint =
+//       'https://places.googleapis.com/v1/places/places/$placeId';
+//
+//   RequestApi.get(
+//    url: "https://places.googleapis.com/v1/places/places/$placeId",
+//   headers: {
+//     'X-Goog-Api-Key': 'YOUR_API_KEY',
+//     'X-Goog-FieldMask': 'id,displayName,location,iconMaskBaseUri,iconBackgroundColor'
+//   }
+// )
+//
+//   if (response.statusCode == 200) {
+//     final data = json.decode(response.body);
+//
+//     final id = data['id'];
+//     final name = data['displayName']['text'];
+//     final lat = data['location']['latitude'];
+//     final lng = data['location']['longitude'];
+//     final iconUrl = data['iconMaskBaseUri'];
+//     final iconBg = data['iconBackgroundColor'];
+//
+//     print('ID: $id');
+//     print('Name: $name');
+//     print('LatLng: $lat, $lng');
+//     print('Icon URL: $iconUrl');
+//     print('Icon BG: $iconBg');
+//   } else {
+//     print('Failed to fetch place details: ${response.statusCode}');
+//     print(response.body);
+//   }
+// }
 
 // class PlaceAutoCompleteDataHandler {
 //   final GooglePlacesApiService placesApiService;

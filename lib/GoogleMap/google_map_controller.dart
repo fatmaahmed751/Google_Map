@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:google_map/Models/place_details_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 import 'package:mvc_pattern/mvc_pattern.dart';
@@ -23,7 +26,7 @@ class MyMapController extends ControllerMVC {
   GoogleMapController? googleMapController;
   late TextEditingController searchController;
   Set<Marker> markers = {};
-  List<PlaceModel> places = [
+ List<PlaceModel> places = [
     PlaceModel(
       id: 1,
       name: 'مستشفى المنيا الجامعى',
@@ -41,6 +44,7 @@ class MyMapController extends ControllerMVC {
     ),
   ];
   List<PlaceSuggestion> placeSuggest=[];
+ PlaceDetailsModel? placeDetailsModel;
   final LatLng currentLatLng = const LatLng(
     28.094148289471846,
     30.74859561310244,
@@ -69,6 +73,7 @@ void initState(){
           sessionToken: sessionToken,
         );
       } else {
+        searchController.clear();
         placeSuggest.clear();
         setState(() {});
       }
@@ -83,6 +88,10 @@ void initState(){
     _debounce?.cancel();
     super.dispose();
   }
+  // PlaceDetailsModel place = ...;
+  //
+  // print(place.latitude);  // يطبع latitude مباشرة
+  // print(place.longitude); // يطبع longitude مباشرة
 
   Future getSuggestedPlaces({
     required place,
@@ -108,6 +117,30 @@ void initState(){
       loading = false;
     });
   }
+
+  Future getPlaceDetails({required  id}) async {
+    setState(() {placeSuggest=[];});
+    setState(() {
+      loading = true;
+    });
+    final sessionToken = Uuid().generateV4();
+    final result = await PickLocationDataHandler.getPlaceDetails(id:id, sessionToken:sessionToken);
+    result.fold(
+          (l){
+        // ToastHelper.showError(message: l.errorModel.modelName);
+      },
+          (r) {
+        placeDetailsModel = r;
+        //goToMySearchedForLocation();
+        setState((){});
+      },
+    );
+    setState(() {
+      loading = false;
+    });
+  }
+
+
 
   Future<bool> checkAndRequestLocation() async {
     try{

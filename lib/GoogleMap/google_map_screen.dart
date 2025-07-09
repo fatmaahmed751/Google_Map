@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_map/GoogleMap/widgets/place_details_widget.dart';
 import 'package:google_map/Widgets/custom_textfield_widget.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -8,22 +10,23 @@ import 'package:mvc_pattern/mvc_pattern.dart';
 
 import '../Widgets/loading_screen.dart';
 import 'google_map_controller.dart';
+
 class MyMapScreen extends StatefulWidget {
   const MyMapScreen({super.key});
 
   @override
   State createState() => MyMapScreenState();
 }
-class MyMapScreenState extends StateMVC<MyMapScreen> {
 
- // final Completer<GoogleMapController> _mapController = Completer();
+class MyMapScreenState extends StateMVC<MyMapScreen> {
+  // final Completer<GoogleMapController> _mapController = Completer();
   MyMapScreenState() : super(MyMapController()) {
-  con = controller as MyMapController;
-   // con =  MyMapController();
+    con = controller as MyMapController;
+    // con =  MyMapController();
   }
 
   late MyMapController con;
- final Completer<GoogleMapController> _mapController = Completer();
+  final Completer<GoogleMapController> _mapController = Completer();
 
   @override
   void initState() {
@@ -40,8 +43,8 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
     // WidgetsBinding.instance.addPostFrameCallback((_) {
     //   con.updateMyLocation();
     // });
-
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -50,22 +53,12 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
         loading: con.loading,
         child: Stack(
           children: [
-          //   con.markers.isEmpty
-          // ? const Center(child: CircularProgressIndicator())
-          //   :
-            CustomTextFieldWidget(
-              controller: con.searchController,
-              onchange: (searchValue){
-                con.searchController.addListener((){
-                  con.getSuggestedPlaces(
-                      place:  con.searchController.text,
-                      sessionToken: con.sessionToken);
-                });
-              },
-            ),
+            //   con.markers.isEmpty
+            // ? const Center(child: CircularProgressIndicator())
+            //   :
             GoogleMap(
               zoomControlsEnabled: false,
-           markers:con.markers,
+              markers: con.markers,
               initialCameraPosition: CameraPosition(
                 target: con.currentLatLng,
                 zoom: 12.0,
@@ -75,22 +68,26 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
                 con.googleMapController = controller;
                 con.initStyleMap(context);
                 con.updateMyLocation();
-
               },
             ),
-            // Positioned(
-            //   bottom: 16,
-            //   right: 16,
-            //   left: 16,
-            //   child: ElevatedButton(
-            //     onPressed: () {
-            //       con.goToMyCurrentLocation();
-            //       print('الموقع المبدئي*****************************************************: ${con.currentLatLng}');
-            //     //  print('الموقع المستهدف: ${con.targetLocation}');
-            //     },
-            //     child: Text("Change location"),
-            //   ),
-            // )
+
+            Positioned(
+              bottom: 16,
+              right: 16,
+              left: 16,
+              child: Column(
+                children: [
+                  CustomTextFieldWidget(
+                    controller: con.searchController,
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 20.h,
+            ),
+            PlaceDetailsWidget(),
+
             // if (con.loading)
             //   const Center(child: CircularProgressIndicator()),
           ],
@@ -99,6 +96,7 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
     );
   }
 }
+
 // class MyMapScreen extends StatefulWidget {
 //   const MyMapScreen({super.key});
 //

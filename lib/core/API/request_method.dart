@@ -13,6 +13,7 @@ import 'package:http/http.dart' as http;
 //import '../../Utilities/shared_preferences.dart';
 //import '../../Utilities/strings.dart';
 //import '../../Widgets/un_login_for_rated_widget.dart';
+import '../../utilitis/shared_preferences.dart';
 import '../error/exceptions.dart';
 import '../network/error_message_model.dart';
 
@@ -143,10 +144,7 @@ class ApiBaseHelper {
       request.headers.addAll({
        'Accept': '*/*',
         'content-type': 'application/json',
-        'X-Goog-Api-Key': 'AIzaSyBfiu-6cnLOXJt7lrO6W5wmj57ArWN1HNI',
-        'X-Goog-FieldMask': 'suggestions',
-
-        //"locale": SharedPref.getCurrentLanguage() ?? "en",
+        "locale": SharedPref.getCurrentLanguage() ?? "en",
         //if (token != null) "Authorization": 'Bearer $token',
        // "Authorization": 'Bearer ${SharedPref.getCurrentUser()?.token.toString()}',
        // if (token != null) "Authorization": 'Bearer $token',
