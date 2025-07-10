@@ -1,7 +1,9 @@
 import 'package:dartz/dartz.dart';
 import '../Models/Place_suggestion.dart';
+import '../Models/destination_model.dart';
 import '../Models/place_autocomplete_model.dart';
 import '../Models/place_details_model.dart';
+import '../Models/route_model.dart';
 import '../core/API/generic_request.dart';
 import '../core/API/request_method.dart';
 import '../core/error/exceptions.dart';
@@ -22,16 +24,18 @@ class PickLocationDataHandler {
       final url =
           "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$encodedPlace""&types=address"
           "&components=country:eg"
-          "&key=YOUR_API_KEY"  // Replace with secure key
+          "&key=YOUR_API_KEY" // Replace with secure key
           "&sessiontoken=$sessionToken";
 
       final response = await GenericRequest<List<PlaceSuggestion>>(
         method: RequestApi.get(
           url: url,
         ),
-        fromMap: (json) => List<PlaceSuggestion>.from(
-          (json["predictions"] as List).map((e) => PlaceSuggestion.fromJson(e)),
-        ).toList(),
+        fromMap: (json) =>
+            List<PlaceSuggestion>.from(
+              (json["predictions"] as List).map((e) =>
+                  PlaceSuggestion.fromJson(e)),
+            ).toList(),
       ).getResponse();
 
       return Right(response);
@@ -39,13 +43,15 @@ class PickLocationDataHandler {
       return Left(ServerFailure(failure.errorMessageModel));
     }
   }
-  static Future<Either<Failure,PlaceDetailsModel>> getPlaceDetails({required String id, required String sessionToken})async{
+
+  static Future<Either<Failure, PlaceDetailsModel>> getPlaceDetails(
+      {required String id, required String sessionToken}) async {
     try {
       PlaceDetailsModel response = await GenericRequest<PlaceDetailsModel>(
-        method: RequestApi.get(
+          method: RequestApi.get(
             url: "https://maps.googleapis.com/maps/api/place/details/json?place_id=$id&fields=geometry&key=AIzaSyDxGfP9wVkkoIDBRwqR1i4H7afn-oQm33w&sessiontoken=$sessionToken",
 
-        ),
+          ),
           fromMap: (json) => PlaceDetailsModel.fromJson(json)
 
         //  fromMap:(_)=>PlaceDetailsModel.fromJson(_["result"]["geometry"]["location"]),
@@ -55,8 +61,50 @@ class PickLocationDataHandler {
       return Left(ServerFailure(failure.errorMessageModel));
     }
   }
-}
 
+  static Future<Either<Failure, RouteModel>> getRoutes({
+  required Destination origin ,  required Destination destination }) async {
+    try {
+      RouteModel response = await GenericRequest<RouteModel>(
+        method: RequestApi.postJson(
+            url: "https://routes.googleapis.com/directions/v2:computeRoutes",
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Goog-Api-Key': 'YOUR_API_KEY',
+              'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
+            },
+            bodyJson: {
+              "origin":origin.toJson(),
+                // "origin":{
+                //   "location":{
+                //     "latLng":{
+                //       "latitude": 37.419734,
+                //       "longitude": -122.0827784
+                //     }
+                //   }
+                // },
+                "destination":destination.toJson(),
+                "travelMode": "DRIVE",
+                "routingPreference": "TRAFFIC_AWARE",
+                "computeAlternativeRoutes": false,
+                "routeModifiers": {
+                  "avoidTolls": false,
+                  "avoidHighways": false,
+                  "avoidFerries": false
+                },
+                "languageCode": "en-US",
+                "units": "METRIC"
+
+            }
+        ),
+        fromMap: RouteModel.fromJson,
+      ).getResponse();
+      return Right(response);
+    } on ServerException catch (failure) {
+      return Left(ServerFailure(failure.errorMessageModel));
+    }
+  }
+}
 
 // Future<void> fetchPlaceDetails(String placeId) async {
 //   final String apiKey = 'YOUR_API_KEY'; // 🔐 استبدله بمفتاحك

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_map/Models/place_details_model.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
@@ -9,7 +10,9 @@ import 'package:mvc_pattern/mvc_pattern.dart';
 import 'dart:async';
 
 import '../Models/Place_suggestion.dart';
+import '../Models/destination_model.dart';
 import '../Models/place_model.dart';
+import '../Models/route_model.dart';
 import 'google_map_data_handler.dart';
 
 class MyMapController extends ControllerMVC {
@@ -26,7 +29,7 @@ class MyMapController extends ControllerMVC {
   GoogleMapController? googleMapController;
   late TextEditingController searchController;
   Set<Marker> markers = {};
- List<PlaceModel> places = [
+  List<PlaceModel> places = [
     PlaceModel(
       id: 1,
       name: 'مستشفى المنيا الجامعى',
@@ -43,44 +46,59 @@ class MyMapController extends ControllerMVC {
       latLng: LatLng(28.10398639898872, 30.753399282718277),
     ),
   ];
-  List<PlaceSuggestion> placeSuggest=[];
- PlaceDetailsModel? placeDetailsModel;
-  final LatLng currentLatLng = const LatLng(
-    28.094148289471846,
-    30.74859561310244,
-  );
+  List<PlaceSuggestion> placeSuggest = [];
+  PlaceDetailsModel? placeDetailsModel;
+  // final LatLng currentLatLng = const LatLng(
+  //   28.094148289471846,
+  //   30.74859561310244,
+  // );
+  late LatLng currentLatLng;
+  RouteInfo? routeInfo;
+  late LatLng currentPosition;
+  bool locationInitialized = false;
+  late LatLng destination;
+  RouteModel? routeModel;
   final LatLng targetLocation = const LatLng(30.257923, 31.537993);
   final Location location = Location();
   void Function()? onMarkersUpdated;
   Timer? _debounce;
+  String? sessionToken;
+  PolylinePoints polylinePoints = PolylinePoints();
+  Set<Polyline> polyLines = {};
 
-  ///TODO
-  final sessionToken = Uuid().generateV4();
-bool isFirst = true;
 
-@override
-void initState(){
-  searchController = TextEditingController();
-  searchController.addListener(() {
-    final input = searchController.text.trim();
+  DestinationModel? destinationModel;
+  //final sessionToken = Uuid().generateV4();
+  void startNewSession() {
+    sessionToken = Uuid().generateV4();
+  }
 
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
+  void endSession() => sessionToken = null;
+  bool isFirst = true;
+  @override
+  void initState() {
+    searchController = TextEditingController();
+   /// getCurrentLocation();
+    searchController.addListener(() {
+      final input = searchController.text.trim();
 
-    _debounce = Timer(const Duration(milliseconds: 200), () {
-      if (input.isNotEmpty) {
-        getSuggestedPlaces(
-          place: input,
-          sessionToken: sessionToken,
-        );
-      } else {
-        searchController.clear();
-        placeSuggest.clear();
-        setState(() {});
-      }
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+
+      _debounce = Timer(const Duration(milliseconds: 200), () {
+        if (input.isNotEmpty) {
+          if (sessionToken == null) startNewSession();
+          getSuggestedPlaces(place: input, sessionToken: sessionToken!);
+        } else {
+          searchController.clear();
+          placeSuggest.clear();
+
+          setState(() {});
+        }
+      });
     });
-  });
-  super.initState();
-}
+    super.initState();
+  }
+
   @override
   void dispose() {
     googleMapController?.dispose();
@@ -93,46 +111,55 @@ void initState(){
   // print(place.latitude);  // يطبع latitude مباشرة
   // print(place.longitude); // يطبع longitude مباشرة
 
-  Future getSuggestedPlaces({
-    required place,
-    required sessionToken
-  })async{
+  Future getSuggestedPlaces({required place, required sessionToken}) async {
     setState(() {
-      placeSuggest=[];
+      placeSuggest = [];
     });
     setState(() {
       loading = true;
     });
     final result = await PickLocationDataHandler.getPlaces(
-        place:place,
-        sessionToken:sessionToken);
+      place: place,
+      sessionToken: sessionToken!,
+    );
     result.fold(
-          (l){
+      (l) {
         //ToastHelper.showError(message: l.errorModel.modelName)
-      }, (r) {
-      placeSuggest = r;
-    },
+      },
+      (r) {
+        placeSuggest = r;
+      },
     );
     setState(() {
       loading = false;
     });
+    sessionToken = null;
   }
 
-  Future getPlaceDetails({required  id}) async {
-    setState(() {placeSuggest=[];});
+  Future getPlaceDetails({required id}) async {
+    setState(() {
+      placeSuggest = [];
+    });
     setState(() {
       loading = true;
     });
-    final sessionToken = Uuid().generateV4();
-    final result = await PickLocationDataHandler.getPlaceDetails(id:id, sessionToken:sessionToken);
+    final result = await PickLocationDataHandler.getPlaceDetails(
+      id: id,
+      sessionToken: sessionToken!,
+    );
     result.fold(
-          (l){
+      (l) {
         // ToastHelper.showError(message: l.errorModel.modelName);
       },
-          (r) {
+      (r) {
         placeDetailsModel = r;
-        //goToMySearchedForLocation();
-        setState((){});
+        endSession();
+        setState(() {});
+        ///هل المكن ده صح
+        destination = LatLng(
+          placeDetailsModel!.latitude!,
+          placeDetailsModel!.longitude!,
+        );
       },
     );
     setState(() {
@@ -140,25 +167,91 @@ void initState(){
     });
   }
 
+ getRoutesDestination() async {
+    if (destinationModel?.origin == null || destinationModel?.destination == null) return;
+    final result = await PickLocationDataHandler.getRoutes(
+      origin: destinationModel!.origin!,
+      destination: destinationModel!.destination!,
+    );
+    result.fold(
+      (l) {
+        // ToastHelper.showError(message: l.errorModel.modelName);
+      },
+      (r) {
+        //ده الخط المرسوم اللى راجع من الgoogle api لكن مش خط مرسوم ولكن نقاط مشفرة
+        final encodedPolyline = r.routes!.first.polyline!.encodedPolyline!;
+      if (encodedPolyline != null) {
+          // فك التشفير
+          List<PointLatLng> result = polylinePoints.decodePolyline(encodedPolyline);
 
+          // تحويل PointLatLng إلى LatLng
+          List<LatLng> polylineCoordinates = result
+              .map((point) => LatLng(point.latitude, point.longitude))
+              .toList();
+
+          // إنشاء الـ polyline
+          Polyline polyline = Polyline(
+            polylineId: PolylineId('route'),
+            color: Colors.blue,
+            width: 5,
+            points: polylineCoordinates,
+          );
+          if (polylineCoordinates.isNotEmpty) {
+            LatLngBounds bounds = _createLatLngBounds(polylineCoordinates);
+
+            // تحريك الكاميرا لتشمل كل المسار
+          googleMapController?.animateCamera(
+              CameraUpdate.newLatLngBounds(bounds,40), // 50 = padding
+            );
+          }
+
+          // إضافته
+          polyLines.clear(); // لو عايزة تعملي Reset
+          polyLines.add(polyline);
+
+          // تحديث الـ UI
+          onMarkersUpdated?.call();
+        }
+      },
+    );
+ }
+
+  LatLngBounds _createLatLngBounds(List<LatLng> coordinates) {
+    double south = coordinates.first.latitude;
+    double north = coordinates.first.latitude;
+    double west = coordinates.first.longitude;
+    double east = coordinates.first.longitude;
+
+    for (LatLng point in coordinates) {
+      if (point.latitude < south) south = point.latitude;
+      if (point.latitude > north) north = point.latitude;
+      if (point.longitude < west) west = point.longitude;
+      if (point.longitude > east) east = point.longitude;
+    }
+
+    return LatLngBounds(
+      southwest: LatLng(south, west),
+      northeast: LatLng(north, east),
+    );
+  }
 
   Future<bool> checkAndRequestLocation() async {
-    try{
-    var serviceEnabled = await location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
+    try {
+      var serviceEnabled = await location.serviceEnabled();
       if (!serviceEnabled) {
-        return false;
-        throw Exception('Location services are required but disabled');
+        serviceEnabled = await location.requestService();
+        if (!serviceEnabled) {
+          return false;
+          throw Exception('Location services are required but disabled');
+        }
       }
+      return true;
+      // checkPermission();
+    } catch (e) {
+      print('Error checking location services: $e');
+      // Consider showing a user-friendly message
+      rethrow;
     }
-    return true;
-   // checkPermission();
-  } catch (e) {
-  print('Error checking location services: $e');
-  // Consider showing a user-friendly message
-  rethrow;
-  }
   }
 
   Future<bool> checkPermission() async {
@@ -177,50 +270,53 @@ void initState(){
   }
 
   void getStreamUserLocation() {
-    location.changeSettings(
-      interval: 2000,
-      distanceFilter: 2
-    );
+    location.changeSettings(interval: 2000, distanceFilter: 2);
     location.onLocationChanged.listen((data) {
-       if (data.latitude != null && data.longitude != null) {
-            addMarkerAsMyLocation(data);
-            updateCameraPosition(data); // يتحرك أول مرة للموقع الفعلي
-          }
-        });
+      if (data.latitude != null && data.longitude != null) {
+        addMarkerAsMyLocation(data);
+        updateCameraPosition(data); // يتحرك أول مرة للموقع الفعلي
+      }
+    });
   }
 
-  void updateCurrentUserLocation()async{
+  void updateCurrentUserLocation() async {
+    var locationData = await location.getLocation();
+    currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+    currentPosition = currentLatLng;
+    var myMarker = Marker(
+      markerId: MarkerId('1'),
+      position: currentPosition,
+    );
+    markers.removeWhere((m) => m.markerId == MarkerId('1'));
+    markers.add(myMarker);
 
-     var locationData = await location.getLocation();
-     var myMarker = Marker(
-       markerId: MarkerId('1'),
-       position: LatLng(locationData.latitude!, locationData.longitude!),
-     );
-     markers.add(myMarker);
-     if (onMarkersUpdated != null) {
-       onMarkersUpdated!(); // this will call setState in the Widget
-     }
-     CameraPosition cameraPosition = CameraPosition(
-       target: LatLng(locationData.latitude!, locationData.longitude!),
-       zoom: 17,
-     );
-     googleMapController?.animateCamera(
-         CameraUpdate.newCameraPosition(cameraPosition));
-
+    if (onMarkersUpdated != null) {
+      onMarkersUpdated!(); // this will call setState in the Widget
+    }
+    CameraPosition cameraPosition = CameraPosition(
+      target:currentPosition,
+      //LatLng(locationData.latitude!, locationData.longitude!),
+      zoom: 17,
+    );
+    googleMapController?.animateCamera(
+      CameraUpdate.newCameraPosition(cameraPosition),
+    );
   }
 
   void updateCameraPosition(LocationData data) {
-    if(isFirst) {
+    if (isFirst) {
       CameraPosition cameraPosition = CameraPosition(
         target: LatLng(data.latitude!, data.longitude!),
         zoom: 17,
       );
       googleMapController?.animateCamera(
-          CameraUpdate.newCameraPosition(cameraPosition));
+        CameraUpdate.newCameraPosition(cameraPosition),
+      );
       isFirst = false;
-    }else {
+    } else {
       googleMapController?.animateCamera(
-          CameraUpdate.newLatLng(LatLng(data.latitude!, data.longitude!)));
+        CameraUpdate.newLatLng(LatLng(data.latitude!, data.longitude!)),
+      );
     }
   }
 
@@ -241,23 +337,26 @@ void initState(){
   void updateMyLocation() async {
     try {
       loading = true;
+      locationInitialized = true;
       onMarkersUpdated?.call();
       await checkAndRequestLocation();
       var hasPermission = await checkPermission();
       if (hasPermission) {
-       // getStreamUserLocation();
+        // getStreamUserLocation();
         updateCurrentUserLocation();
       } else {
-        print('***********************************************************************Location permissions not granted');
+        print(
+          '***********************************************************************Location permissions not granted',
+        );
         // Handle permission denial
       }
     } catch (e) {
       print('Error updating location: $e');
       // Handle error appropriately
-    }  finally {
-  loading = false;
-  onMarkersUpdated?.call(); // لتحديث الـ UI عند انتهاء التحميل
-  }
+    } finally {
+      loading = false;
+      onMarkersUpdated?.call(); // لتحديث الـ UI عند انتهاء التحميل
+    }
   }
 
   void initMarker() {
@@ -291,6 +390,4 @@ void initState(){
     ).loadString("assets/map_style/night_map_style.json");
     googleMapController!.setMapStyle(nightStyle);
   }
-
-
 }

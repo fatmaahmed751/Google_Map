@@ -53,24 +53,23 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
         loading: con.loading,
         child: Stack(
           children: [
-            //   con.markers.isEmpty
-            // ? const Center(child: CircularProgressIndicator())
-            //   :
-            GoogleMap(
-              zoomControlsEnabled: false,
-              markers: con.markers,
-              initialCameraPosition: CameraPosition(
-                target: con.currentLatLng,
-                zoom: 12.0,
-              ),
-              onMapCreated: (GoogleMapController controller) {
-                _mapController.complete(controller);
-                con.googleMapController = controller;
-                con.initStyleMap(context);
-                con.updateMyLocation();
-              },
-            ),
-
+        con.locationInitialized
+        ? GoogleMap(
+          polylines: con.polyLines,
+        zoomControlsEnabled: false,
+          markers: con.markers,
+          initialCameraPosition: CameraPosition(
+            target: con.currentLatLng,
+            zoom: 12.0,
+          ),
+          onMapCreated: (GoogleMapController controller) {
+            _mapController.complete(controller);
+            con.googleMapController = controller;
+            con.initStyleMap(context);
+            con.updateMyLocation();
+          },
+        )
+              : const Center(child: CircularProgressIndicator()),
             Positioned(
               bottom: 16,
               right: 16,
@@ -87,16 +86,30 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
               height: 20.h,
             ),
             PlaceDetailsWidget(),
-
-            // if (con.loading)
-            //   const Center(child: CircularProgressIndicator()),
           ],
         ),
       ),
     );
   }
 }
-
+//   con.markers.isEmpty
+// ? const Center(child: CircularProgressIndicator())
+//   :
+//  GoogleMap(
+// //   polylines: ,
+//    zoomControlsEnabled: false,
+//    markers: con.markers,
+//    initialCameraPosition: CameraPosition(
+//      target: con.currentLatLng,
+//      zoom: 12.0,
+//    ),
+//    onMapCreated: (GoogleMapController controller) {
+//      _mapController.complete(controller);
+//      con.googleMapController = controller;
+//      con.initStyleMap(context);
+//      con.updateMyLocation();
+//    },
+//  ),
 // class MyMapScreen extends StatefulWidget {
 //   const MyMapScreen({super.key});
 //

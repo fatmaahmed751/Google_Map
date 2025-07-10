@@ -33,6 +33,8 @@ class _PlaceDetailsWidgetState extends StateMVC<PlaceDetailsWidget> {
                 print('Name: ${con.placeDetailsModel?.result!.name}');
                 print('📍 Lat: ${con.placeDetailsModel!.latitude}');
                 print('📍 Lng: ${con.placeDetailsModel!.longitude}');
+                await con.getRoutesDestination();
+
               } else {
                 print('❌ مفيش بيانات راجعة من الـ API');
               }
