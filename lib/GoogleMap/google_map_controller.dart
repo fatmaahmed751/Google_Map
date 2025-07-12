@@ -21,9 +21,11 @@ class MyMapController extends ControllerMVC {
     _this ??= MyMapController._();
     return _this!;
   }
-  MyMapController._();
-  static MyMapController? _this;
 
+  MyMapController._();
+
+  static MyMapController? _this;
+  //var locationData =  location.getLocation();
   late LatLng latLng;
   bool loading = false;
   GoogleMapController? googleMapController;
@@ -48,11 +50,15 @@ class MyMapController extends ControllerMVC {
   ];
   List<PlaceSuggestion> placeSuggest = [];
   PlaceDetailsModel? placeDetailsModel;
-  // final LatLng currentLatLng = const LatLng(
-  //   28.094148289471846,
-  //   30.74859561310244,
-  // );
-  late LatLng currentLatLng;
+
+  final LatLng currentLatLng = const LatLng(
+    28.099414823056698, 30.758728803467985
+  );
+// late LatLng currentLatLng;
+  //LatLng? currentLatLng;
+  LatLng startPoint = LatLng(
+      28.091341960156655, 30.755974203275553); // مثال: مستشفى
+  LatLng endPoint = LatLng(28.10398639898872, 30.753399282718277);
   RouteInfo? routeInfo;
   late LatLng currentPosition;
   bool locationInitialized = false;
@@ -65,9 +71,10 @@ class MyMapController extends ControllerMVC {
   String? sessionToken;
   PolylinePoints polylinePoints = PolylinePoints();
   Set<Polyline> polyLines = {};
-
+Set<Circle>circles={};
 
   DestinationModel? destinationModel;
+
   //final sessionToken = Uuid().generateV4();
   void startNewSession() {
     sessionToken = Uuid().generateV4();
@@ -75,29 +82,33 @@ class MyMapController extends ControllerMVC {
 
   void endSession() => sessionToken = null;
   bool isFirst = true;
+
   @override
   void initState() {
     searchController = TextEditingController();
-   /// getCurrentLocation();
-    searchController.addListener(() {
-      final input = searchController.text.trim();
-
-      if (_debounce?.isActive ?? false) _debounce!.cancel();
-
-      _debounce = Timer(const Duration(milliseconds: 200), () {
-        if (input.isNotEmpty) {
-          if (sessionToken == null) startNewSession();
-          getSuggestedPlaces(place: input, sessionToken: sessionToken!);
-        } else {
-          searchController.clear();
-          placeSuggest.clear();
-
-          setState(() {});
-        }
-      });
-    });
+    updateMyLocation();
+    /// getCurrentLocation();
+    //  searchController.addListener(() {
+    //    final input = searchController.text.trim();
+    //
+    //    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    //
+    //    _debounce = Timer(const Duration(milliseconds: 200), () {
+    //      if (input.isNotEmpty) {
+    //        if (sessionToken == null) startNewSession();
+    //        getSuggestedPlaces(place: input, sessionToken: sessionToken!);
+    //      } else {
+    //        searchController.clear();
+    //        placeSuggest.clear();
+    //
+    //        setState(() {});
+    //      }
+    //    });
+    //  });
     super.initState();
   }
+
+
 
   @override
   void dispose() {
@@ -106,10 +117,6 @@ class MyMapController extends ControllerMVC {
     _debounce?.cancel();
     super.dispose();
   }
-  // PlaceDetailsModel place = ...;
-  //
-  // print(place.latitude);  // يطبع latitude مباشرة
-  // print(place.longitude); // يطبع longitude مباشرة
 
   Future getSuggestedPlaces({required place, required sessionToken}) async {
     setState(() {
@@ -134,6 +141,26 @@ class MyMapController extends ControllerMVC {
       loading = false;
     });
     sessionToken = null;
+  }
+
+  void drawCustomPolyline() {
+    List<LatLng> points = [
+      LatLng(28.096604347727716, 30.758291631802862),
+      LatLng(28.105067659782573, 30.756764338521446),
+      LatLng(28.09886655374783, 30.757515979509574),
+    ];
+
+    Polyline polyline = Polyline(
+      polylineId: PolylineId('custom_route'),
+      color: Colors.red.withOpacity(0.5),
+      width:2,
+      points: points,
+    );
+
+    polyLines.clear(); // لو بتحب تمسح القديم
+    polyLines.add(polyline);
+
+    onMarkersUpdated?.call(); // علشان يحدث الـ UI
   }
 
   Future getPlaceDetails({required id}) async {
@@ -179,39 +206,40 @@ class MyMapController extends ControllerMVC {
       },
       (r) {
         //ده الخط المرسوم اللى راجع من الgoogle api لكن مش خط مرسوم ولكن نقاط مشفرة
-        final encodedPolyline = r.routes!.first.polyline!.encodedPolyline!;
-      if (encodedPolyline != null) {
-          // فك التشفير
-          List<PointLatLng> result = polylinePoints.decodePolyline(encodedPolyline);
-
-          // تحويل PointLatLng إلى LatLng
-          List<LatLng> polylineCoordinates = result
-              .map((point) => LatLng(point.latitude, point.longitude))
-              .toList();
-
-          // إنشاء الـ polyline
-          Polyline polyline = Polyline(
-            polylineId: PolylineId('route'),
-            color: Colors.blue,
-            width: 5,
-            points: polylineCoordinates,
-          );
-          if (polylineCoordinates.isNotEmpty) {
-            LatLngBounds bounds = _createLatLngBounds(polylineCoordinates);
-
-            // تحريك الكاميرا لتشمل كل المسار
-          googleMapController?.animateCamera(
-              CameraUpdate.newLatLngBounds(bounds,40), // 50 = padding
-            );
-          }
-
-          // إضافته
-          polyLines.clear(); // لو عايزة تعملي Reset
-          polyLines.add(polyline);
-
-          // تحديث الـ UI
-          onMarkersUpdated?.call();
-        }
+      //   final encodedPolyline = r.routes!.first.polyline!.encodedPolyline!;
+      // if (encodedPolyline != null) {
+      //     // فك التشفير
+      //     List<PointLatLng> result = polylinePoints.decodePolyline(encodedPolyline);
+      //
+      //     // تحويل PointLatLng إلى LatLng
+      //     List<LatLng> polylineCoordinates = result
+      //         .map((point) => LatLng(point.latitude, point.longitude))
+      //         .toList();
+      //
+      //     // إنشاء الـ polyline
+      //     Polyline polyline = Polyline(
+      //       polylineId: PolylineId('route'),
+      //       color: Colors.blue,
+      //       width: 5,
+      //       points:
+      //       polylineCoordinates,
+      //     );
+      //     if (polylineCoordinates.isNotEmpty) {
+      //       LatLngBounds bounds = _createLatLngBounds(polylineCoordinates);
+      //
+      //       // تحريك الكاميرا لتشمل كل المسار
+      //     googleMapController?.animateCamera(
+      //         CameraUpdate.newLatLngBounds(bounds,40), // 50 = padding
+      //       );
+      //     }
+      //
+      //     // إضافته
+      //     polyLines.clear(); // لو عايزة تعملي Reset
+      //     polyLines.add(polyline);
+      //
+      //     // تحديث الـ UI
+      //     onMarkersUpdated?.call();
+      //  }
       },
     );
  }
@@ -281,7 +309,8 @@ class MyMapController extends ControllerMVC {
 
   void updateCurrentUserLocation() async {
     var locationData = await location.getLocation();
-    currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
+
+    // currentLatLng = LatLng(locationData.latitude!, locationData.longitude!);
     currentPosition = currentLatLng;
     var myMarker = Marker(
       markerId: MarkerId('1'),
@@ -296,7 +325,7 @@ class MyMapController extends ControllerMVC {
     CameraPosition cameraPosition = CameraPosition(
       target:currentPosition,
       //LatLng(locationData.latitude!, locationData.longitude!),
-      zoom: 17,
+      zoom: 18,
     );
     googleMapController?.animateCamera(
       CameraUpdate.newCameraPosition(cameraPosition),
@@ -337,7 +366,7 @@ class MyMapController extends ControllerMVC {
   void updateMyLocation() async {
     try {
       loading = true;
-      locationInitialized = true;
+      //locationInitialized = true;
       onMarkersUpdated?.call();
       await checkAndRequestLocation();
       var hasPermission = await checkPermission();
@@ -361,26 +390,24 @@ class MyMapController extends ControllerMVC {
 
   void initMarker() {
     Circle myLocation = Circle(
+      circleId: CircleId('my_location_circle'),
       center: LatLng(28.094148289471846, 30.74859561310244),
-      radius: 1000,
-      strokeWidth: 1,
-      fillColor: Colors.grey.withOpacity(0.5),
-      circleId: CircleId('1'),
+      radius: 100,
+      strokeWidth: 2,
+      strokeColor: Colors.red,
+      fillColor: Colors.red.withOpacity(0.3),
     );
-    //  var myMarkers= places.map((placeModel)=>
-    //     Marker(
-    //       infoWindow: InfoWindow(title:placeModel.name),
-    //       position: placeModel.latLng,
-    //         markerId: MarkerId(placeModel.id.toString(),
-    // ))).toSet();
-    // markers.add(myLocation);
-  }
 
+    circles.clear();
+    circles.add(myLocation);
+    onMarkersUpdated?.call();
+
+  }
   Future<void> goToMyCurrentLocation() async {
     await googleMapController!.animateCamera(
       CameraUpdate.newLatLng(targetLocation),
     );
-    print('الموقع المبدئي: ${currentLatLng}');
+   // print('الموقع المبدئي: ${currentLatLng}');
     print('الموقع المستهدف: ${targetLocation}');
   }
 

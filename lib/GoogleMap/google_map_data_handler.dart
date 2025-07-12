@@ -24,7 +24,7 @@ class PickLocationDataHandler {
       final url =
           "https://maps.googleapis.com/maps/api/place/autocomplete/json?input=$encodedPlace""&types=address"
           "&components=country:eg"
-          "&key=YOUR_API_KEY" // Replace with secure key
+          "&key=" // Replace with secure key
           "&sessiontoken=$sessionToken";
 
       final response = await GenericRequest<List<PlaceSuggestion>>(
@@ -49,7 +49,7 @@ class PickLocationDataHandler {
     try {
       PlaceDetailsModel response = await GenericRequest<PlaceDetailsModel>(
           method: RequestApi.get(
-            url: "https://maps.googleapis.com/maps/api/place/details/json?place_id=$id&fields=geometry&key=AIzaSyDxGfP9wVkkoIDBRwqR1i4H7afn-oQm33w&sessiontoken=$sessionToken",
+            url: "https://maps.googleapis.com/maps/api/place/details/json?place_id=$id&fields=geometry&key=&sessiontoken=$sessionToken",
 
           ),
           fromMap: (json) => PlaceDetailsModel.fromJson(json)
@@ -70,7 +70,7 @@ class PickLocationDataHandler {
             url: "https://routes.googleapis.com/directions/v2:computeRoutes",
             headers: {
               'Content-Type': 'application/json',
-              'X-Goog-Api-Key': 'YOUR_API_KEY',
+              'X-Goog-Api-Key': '',
               'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline'
             },
             bodyJson: {

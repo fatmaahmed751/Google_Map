@@ -39,10 +39,11 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
         setState(() {});
       }
     };
-
-    // WidgetsBinding.instance.addPostFrameCallback((_) {
-    //   con.updateMyLocation();
-    // });
+    con.initMarker();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      con.updateMyLocation();
+      con.drawCustomPolyline(); // ← يرسم الخط
+    });
   }
 
   @override
@@ -53,39 +54,56 @@ class MyMapScreenState extends StateMVC<MyMapScreen> {
         loading: con.loading,
         child: Stack(
           children: [
-        con.locationInitialized
-        ? GoogleMap(
-          polylines: con.polyLines,
-        zoomControlsEnabled: false,
-          markers: con.markers,
-          initialCameraPosition: CameraPosition(
-            target: con.currentLatLng,
-            zoom: 12.0,
-          ),
-          onMapCreated: (GoogleMapController controller) {
-            _mapController.complete(controller);
-            con.googleMapController = controller;
-            con.initStyleMap(context);
-            con.updateMyLocation();
-          },
-        )
-              : const Center(child: CircularProgressIndicator()),
-            Positioned(
-              bottom: 16,
-              right: 16,
-              left: 16,
-              child: Column(
-                children: [
-                  CustomTextFieldWidget(
-                    controller: con.searchController,
-                  ),
-                ],
-              ),
-            ),
+        // con.locationInitialized
+        // ?
+        // con.currentLatLng == null
+        // ? const Center(child: CircularProgressIndicator())
+        //   :
+        GoogleMap(
+          circles: con.circles,
+    //polylines: con.polyLines,
+      zoomControlsEnabled: false,
+      markers: con.markers,
+      initialCameraPosition: CameraPosition(
+        target: con.currentLatLng,
+        zoom: 17.0,
+      ),
+      onMapCreated: (GoogleMapController controller) {
+        _mapController.complete(controller);
+        con.googleMapController = controller;
+        con.initStyleMap(context);
+        con.updateMyLocation();
+      },
+    ),
+
+    // GoogleMap(
+        //  polylines: con.polyLines,
+        // zoomControlsEnabled: false,
+        //   markers: con.markers,
+        //   initialCameraPosition: CameraPosition(
+        //     target: con.currentLatLng,
+        //     zoom: 15.0,
+        //   ),
+        //   onMapCreated: (GoogleMapController controller) {
+        //     _mapController.complete(controller);
+        //     con.googleMapController = controller;
+        //     con.initStyleMap(context);
+        //     //con.updateMyLocation();
+        //   },
+        // ),
+             // : const Center(child: CircularProgressIndicator()),
+            // Positioned(
+            //   top:6,
+            //   right: 16,
+            //   left: 16,
+            //   child: TextFormField(
+            //     controller: con.searchController,
+            //   ),
+            // ),
             SizedBox(
-              height: 20.h,
+              height: 20,
             ),
-            PlaceDetailsWidget(),
+       //  PlaceDetailsWidget(),
           ],
         ),
       ),
